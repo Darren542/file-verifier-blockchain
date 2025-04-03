@@ -2,6 +2,7 @@ import os
 import hashlib
 import json
 from web3 import Web3
+from utils import load_contract_abi
 
 # === CONFIG ===
 FOLDER_TO_SCAN = "../myfiles"  # or any local test folder
@@ -9,12 +10,7 @@ RPC_URL = os.getenv("RPC_URL")
 CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 
 # === LOAD ABI ===
-with open("FileRegistry_abi.json") as f:
-    abi = json.load(f)
-
-# === CONNECT TO BLOCKCHAIN ===
-# w3 = Web3(Web3.HTTPProvider(RPC_URL))
-# contract = w3.eth.contract(address=Web3.to_checksum_address(CONTRACT_ADDRESS), abi=abi)
+abi = load_contract_abi()
 
 # === HASH FUNCTION ===
 def hash_file(filepath):
@@ -26,7 +22,7 @@ def hash_file(filepath):
 
 # === SCAN & COMPARE ===
 def check_files(folder, contract_address, rpc_url):
-    print(f"📁 Scanning folder: {folder}\n")
+    print(f"Scanning folder: {folder}\n")
     for filename in os.listdir(folder):
         filepath = os.path.join(folder, filename)
         if not os.path.isfile(filepath): continue

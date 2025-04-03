@@ -3,6 +3,7 @@ import json
 from scanner import check_files
 from upload_file import upload_file
 from gen_users import gen_users
+from transfer_ownership import transfer_ownership
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -37,7 +38,8 @@ def show_menu():
     print("\n=== MENU ===")
     print("1. Scan a directory")
     print("2. Upload a file")
-    print("3. Exit")
+    print("3. Transfer ownership of a file")
+    print("4. Exit")
 
 def main():
     users = load_users()
@@ -66,8 +68,23 @@ def main():
                 upload_file(file, user["address"], user["private_key"], CONTRACT_ADDRESS, RPC_URL)
             else:
                 print("File not found.")
-
         elif choice == "3":
+            filename = input("Enter the filename to transfer ownership: ").strip()
+            new_user = input("Enter the username of the new owner: ").strip().lower()
+            if new_user not in users:
+                print("User not found.")
+            else:
+                new_address = users[new_user]["address"]
+                transfer_ownership(
+                    filename,
+                    user["address"],
+                    user["private_key"],
+                    new_address,
+                    CONTRACT_ADDRESS,
+                    RPC_URL
+                )
+
+        elif choice == "4":
             print("Goodbye!")
             break
         else:

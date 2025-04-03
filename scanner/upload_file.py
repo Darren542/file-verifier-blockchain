@@ -3,18 +3,15 @@ import os
 import hashlib
 import json
 from web3 import Web3
+from web3.exceptions import ContractLogicError, Web3Exception
+from utils import load_contract_abi
 
 # === CONFIG ===
 RPC_URL = os.getenv("RPC_URL")
 CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 
 # === Load ABI ===
-with open("FileRegistry_abi.json") as f:
-    abi = json.load(f)
-
-# === Connect to blockchain ===
-# w3 = Web3(Web3.HTTPProvider(RPC_URL))
-# contract = w3.eth.contract(address=Web3.to_checksum_address(CONTRACT_ADDRESS), abi=abi)
+abi = load_contract_abi()
 
 # === Hash a file ===
 def hash_file(filepath):
@@ -26,39 +23,45 @@ def hash_file(filepath):
 
 # === Upload hash to blockchain ===
 def upload_file(filepath, address, private_key, contract_address, rpc_url):
-    filename = os.path.basename(filepath)
     filehash = hash_file(filepath)
+    filename = os.path.basename(filepath)
 
     print(f"Uploading {filename} with hash {filehash}...")
 
-    w3 = Web3(Web3.HTTPProvider(rpc_url))
-    contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=abi)
+    try:
+        # Connect to blockchain
+        with open("FileRegistry_abi.json") as f:
+            abi = json.load(f)
 
-    nonce = w3.eth.get_transaction_count(address)
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+        contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=abi)
 
-    txn = contract.functions.addFileVersion(filename, filehash).build_transaction({
-        "from": address,
-        "nonce": nonce,
-        "gas": 200000,
-        "gasPrice": w3.to_wei("1", "gwei")
-    })
+        nonce = w3.eth.get_transaction_count(address)
+        func = contract.functions.addFileVersion(filename, filehash)
 
-    signed_txn = w3.eth.account.sign_transaction(txn, private_key=private_key)
-    tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+        gas_estimate = func.estimate_gas({"from": address})
+        txn = func.build_transaction({
+            "from": address,
+            "nonce": nonce,
+            "gas": gas_estimate + 10000,
+            "gasPrice": w3.to_wei("1", "gwei")
+        })
 
-    print(f"Sent transaction: {tx_hash.hex()}")
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-    print(f"Transaction mined in block {receipt.blockNumber}")
+        signed_txn = w3.eth.account.sign_transaction(txn, private_key=private_key)
+        tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-# === CLI Entry Point ===
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python upload_file.py path/to/file")
-        sys.exit(1)
+        print(f"File uploaded successfully. Tx Hash: {tx_hash.hex()}")
 
-    filepath = sys.argv[1]
-    if not os.path.exists(filepath):
-        print("File not found.")
-        sys.exit(1)
-
-    upload_file(filepath)
+    except ContractLogicError as e:
+        # Display smart contract revert reason
+        message = str(e)
+        if "reverted with reason string" in message:
+            reason = message.split("reverted with reason string '")[1].split("'")[0]
+            print(f"Reverted: {reason}")
+        else:
+            print(f"Contract reverted: {message}")
+    except Web3Exception as e:
+        print(f"Web3 error: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")

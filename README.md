@@ -66,6 +66,7 @@ npx hardhat test
 
 Start the local blockchain:
 ```bash
+npx hardhat compile
 npx hardhat node
 ```
 

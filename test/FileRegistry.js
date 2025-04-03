@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 
-describe("FileRegistry", function () {
+describe("FileRegistry - Basic Tasks", function () {
   let FileRegistry, registry;
 
   beforeEach(async function () {
@@ -54,3 +54,62 @@ describe("FileRegistry", function () {
     ).to.be.revertedWith("File not found");
   });
 });
+
+describe("FileRegistry - Ownership and Version Control", function () {
+  let registry, owner, user1, user2;
+
+  beforeEach(async function () {
+    const FileRegistry = await ethers.getContractFactory("FileRegistry");
+    [owner, user1, user2] = await ethers.getSigners();
+    registry = await FileRegistry.deploy();
+    await registry.waitForDeployment();
+  });
+
+  it("should allow a user to add a new file and become its owner", async function () {
+    await registry.connect(user1).addFileVersion("test.txt", "hash1");
+    const fileOwner = await registry.getOwner("test.txt");
+    expect(fileOwner).to.equal(user1.address);
+  });
+
+  it("should not allow non-owners to add new versions", async function () {
+    await registry.connect(user1).addFileVersion("test.txt", "hash1");
+
+    await expect(
+      registry.connect(user2).addFileVersion("test.txt", "hash2")
+    ).to.be.revertedWith("Only the file owner can add new versions");
+  });
+
+  it("should allow owner to add multiple versions", async function () {
+    await registry.connect(user1).addFileVersion("test.txt", "hash1");
+    await registry.connect(user1).addFileVersion("test.txt", "hash2");
+
+    const latest = await registry.getLatestFileVersion("test.txt");
+    expect(latest.version).to.equal(2);
+    expect(latest.hash).to.equal("hash2");
+  });
+
+  it("should allow the owner to transfer ownership", async function () {
+    await registry.connect(user1).addFileVersion("test.txt", "hash1");
+    await registry.connect(user1).transferOwnership("test.txt", user2.address);
+
+    const newOwner = await registry.getOwner("test.txt");
+    expect(newOwner).to.equal(user2.address);
+  });
+
+  it("should not allow non-owners to transfer ownership", async function () {
+    await registry.connect(user1).addFileVersion("test.txt", "hash1");
+
+    await expect(
+      registry.connect(user2).transferOwnership("test.txt", user2.address)
+    ).to.be.revertedWith("Only the file owner can transfer ownership");
+  });
+
+  it("should prevent setting ownership to the zero address", async function () {
+    await registry.connect(user1).addFileVersion("test.txt", "hash1");
+
+    await expect(
+      registry.connect(user1).transferOwnership("test.txt", ethers.ZeroAddress)
+    ).to.be.revertedWith("New owner cannot be the zero address");
+  });
+});
+
