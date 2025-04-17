@@ -42,7 +42,7 @@ def check_files(folder, contract_address, rpc_url):
             lversion = latest[2]
 
             if local_hash == blockchain_hash:
-                print(f"{filename}: Verified (v{version})")
+                print(f"{filename}: Verified (v{lversion})")
             else:
                 versions = contract.functions.getAllVersions(filename).call()
                 matching_version = None
