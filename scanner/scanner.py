@@ -33,13 +33,27 @@ def check_files(folder, contract_address, rpc_url):
             w3 = Web3(Web3.HTTPProvider(rpc_url))
             contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=abi)
             latest = contract.functions.getLatestFileVersion(filename).call()
+
+            if not latest:
+                print(f"{filename}: Not found on blockchain")
+                continue
+
             blockchain_hash = latest[1]  # .hash field
-            version = latest[2]
+            lversion = latest[2]
 
             if local_hash == blockchain_hash:
                 print(f"{filename}: Verified (v{version})")
             else:
-                print(f"{filename}: Outdated (v{version} on blockchain)")
+                versions = contract.functions.getAllVersions(filename).call()
+                matching_version = None
+                for version in versions:
+                    if version[1] == local_hash:
+                        matching_version = version
+                        break
+                if matching_version:
+                    print(f"{filename}: Version mismatch - this is v{matching_version[2]}, latest is v{lversion}")
+                else:
+                    print(f"{filename}: Hash not found on blockchain (latest is v{lversion})")
 
         except Exception as e:
             print(f"{filename}: Not found on blockchain")
