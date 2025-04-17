@@ -4,7 +4,9 @@ This project is a blockchain-based system for **file integrity** and **version c
 
 - ✅ Scan local files for verification
 - 📤 Upload new file versions
-- 🔐 Support multiple users with password-based login
+- 🔍 Check file integrity
+- 🔄 Transfer Ownership of files
+- 🔐 Support multiple users
 
 ## 📦 Project Structure
 ```plaintext
@@ -127,4 +129,5 @@ python main.py
 Choose:
 - `1` Scan a directory
 - `2` Upload a file
-- `3` Exit
+- `3` Transfer ownership
+- `4` Exit

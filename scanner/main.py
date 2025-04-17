@@ -1,5 +1,6 @@
 import os
 import json
+import getpass
 from scanner import check_files
 from upload_file import upload_file
 from gen_users import gen_users
@@ -27,7 +28,8 @@ def select_user(users):
     if username not in users:
         print("User not found.")
         return None
-    password = input("Enter your password: ").strip()
+    password = getpass.getpass("Enter your password: ")
+    # password = input("Enter your password: ").strip()
     user_password = users[username].get("password")
     if password != user_password:
         print("Incorrect password.")
